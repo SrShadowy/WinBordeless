@@ -33,3 +33,9 @@
 
 x64\*
 
+/ImGui/example_glfw_opengl2
+/x64
+/x64
+/x64/Release
+*.pdb
+/x64
