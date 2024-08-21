@@ -55,7 +55,7 @@ BOOL CALLBACK MonitorEnumProc(HMONITOR hMonitor, HDC hdcMonitor, LPRECT lprcMoni
         NDisplay display;
         display.width = monitorInfo.rcMonitor.right - monitorInfo.rcMonitor.left;
         display.height = monitorInfo.rcMonitor.bottom - monitorInfo.rcMonitor.top;
-
+        display.monitorPos = monitorInfo.rcMonitor;
 
         DISPLAY_DEVICEA device;
         ZeroMemory(&device, sizeof(device));
@@ -76,6 +76,7 @@ BOOL CALLBACK MonitorEnumProc(HMONITOR hMonitor, HDC hdcMonitor, LPRECT lprcMoni
                     display.colorDepth = devMode.dmBitsPerPel;
                     display.refreshRate = devMode.dmDisplayFrequency;
                     display.name = device.DeviceName;
+            
                     //printf("\n\nMonitor: %s, Resolution: %dx%d, Color Depth: %d, Refresh Rate: %dHz\n", display.name.c_str(), display.width, display.height, display.colorDepth, display.refreshRate);
                     monitors->push_back(display);
                 }
@@ -146,6 +147,14 @@ void Bordeless::SetWindowBorderlessFullscreen(HWND hwnd)
         winList.push_back(NewWindow);
     }
 
+
+}
+
+bool Bordeless::RestoreWindow(WinNames win)
+{
+    SetWindowLong(win.hwnd, GWL_STYLE, win.style);
+    SetWindowLong(win.hwnd, GWL_EXSTYLE, win.exStyle);
+    SetWindowPos(win.hwnd, HWND_TOP, win.windowRect.left, win.windowRect.top, win.windowRect.right - win.windowRect.left, win.windowRect.bottom - win.windowRect.top, SWP_FRAMECHANGED | SWP_SHOWWINDOW);
 
 }
 

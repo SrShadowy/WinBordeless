@@ -28,6 +28,7 @@ struct NDisplay {
     int height = 0;
     int colorDepth = 0; 
     int refreshRate = 0;
+    RECT monitorPos{0,0};
 };
 
 class Bordeless
@@ -53,7 +54,9 @@ private:
 
 public:
     void SetWindowBorderlessFullscreen(HWND hwnd);
+    bool RestoreWindow(WinNames hwn);
     void RestoreWindow();
+
 
     bool ignoreWindow(WinNames hwn);
 

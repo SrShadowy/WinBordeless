@@ -91,6 +91,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
     case WM_PAINT: {
         PAINTSTRUCT ps;
         HDC hdc = BeginPaint(hwnd, &ps);
+        
         FillRect(hdc, &ps.rcPaint, (HBRUSH)(COLOR_WINDOW + 1));
         EndPaint(hwnd, &ps);
     }
@@ -137,7 +138,8 @@ std::string GetMonitorNameForWindow(HWND hwnd) {
     MONITORINFOEXA monitorInfo;
     monitorInfo.cbSize = sizeof(MONITORINFOEXA);
     if (GetMonitorInfoA(hMonitor, &monitorInfo)) {
-        return std::string(monitorInfo.szDevice);
+        return std::string(monitorInfo.szDevice) + " pixels: " + std::to_string( monitorInfo.rcMonitor.right - monitorInfo.rcMonitor.left ) + " x " + std::to_string(monitorInfo.rcMonitor.bottom - monitorInfo.rcMonitor.top) + " p";
+
     }
 
     return u8"Monitor não encontrado";
@@ -182,7 +184,7 @@ void UI::CreateWindowTesting()
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
-
+    Testing.hwnd = nullptr;
 
 
 }
@@ -253,6 +255,10 @@ inline void UI::window1::renderWindowOptions()
         ImGui::Text("Pid: %d", WinSelected.pid);
         ImGui::EndChild();
     }
+    if(ImGui::Button(u8"Aplicar modo janela sem bordas"))
+    {
+        utility.SetWindowBorderlessFullscreen(WinSelected.hwnd);
+    }
 
 
     if (ImGui::Button(u8"Criar uma janela de teste"))
@@ -260,37 +266,74 @@ inline void UI::window1::renderWindowOptions()
 
     if (Testing.hwnd)
     {
-        ImGui::Text(u8"Posição %d %d", Testing.position.x, Testing.position.y);
-        ImGui::Text(u8"Tamanho %d x %d", Testing.windowRect.right - Testing.windowRect.left, Testing.windowRect.bottom - Testing.windowRect.top);
+        ImGui::BeginChild("#TestingWindow", { -1, 200 }, ImGuiChildFlags_Border);
+            ImGui::Text(u8"Posição %d %d", Testing.position.x, Testing.position.y);
+            ImGui::Text(u8"Tamanho %d x %d", Testing.windowRect.right - Testing.windowRect.left, Testing.windowRect.bottom - Testing.windowRect.top);
 
-        ImGui::Text(u8"Se localizando no %s", GetMonitorNameForWindow(Testing.hwnd).c_str());
+            ImGui::Text(u8"Se localizando no %s", GetMonitorNameForWindow(Testing.hwnd).c_str());
 
-        if (ImGui::SliderInt("Mover janela no eixo X", (int*)&Testing.position.x, 0, MaxResolution.x))
+            if (ImGui::SliderInt("Mover janela no eixo X", (int*)&Testing.position.x, 0, MaxResolution.x))
+            {
+                WindowProc(Testing.hwnd, WM_USER_MOVE, 1, Testing.position.x);
+            }
+
+            if (ImGui::SliderInt("Mover janela no eixo Y", (int*)&Testing.position.y, 0, MaxResolution.y))
+            {
+                WindowProc(Testing.hwnd, WM_USER_MOVE, 2, Testing.position.y);
+            }
+
+            if(ImGui::Button("Remover Bordas"))
+            {
+                Testing.style = WS_POPUP | WS_VISIBLE;
+                SetWindowLong(Testing.hwnd, GWL_STYLE, Testing.style);
+            }
+
+            ImGui::SameLine();
+
+            if (ImGui::Button("Por Bordas"))
+            {
+                Testing.style = WS_OVERLAPPEDWINDOW | WS_VISIBLE;
+                SetWindowLong(Testing.hwnd, GWL_STYLE, Testing.style);
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Chamar para cima"))
+            {
+                SetFocus(Testing.hwnd);
+                SetForegroundWindow(Testing.hwnd);
+            }
+
+            ImGui::Text("Mover para o monitor:");
+            static bool fullscreen = false;
+            ImGui::Checkbox(u8"Ajustar para tela cheia", &fullscreen);
+
+            auto getMonitor = utility.getMonitorList();
+            for (const auto moni : getMonitor)
+            {
+                if (ImGui::Button(moni.name.c_str()))
+                {
+                    if(fullscreen)
+                        SetWindowPos(Testing.hwnd, NULL, moni.monitorPos.left, moni.monitorPos.top, moni.width, moni.height, SWP_NOZORDER | SWP_NOACTIVATE);
+                    else
+                        SetWindowPos(Testing.hwnd, NULL, moni.monitorPos.left, moni.monitorPos.top, 0, 0, SWP_NOZORDER | SWP_NOSIZE | SWP_NOACTIVATE);
+                }
+                ImGui::SameLine();
+
+            }
+            ImGui::NewLine();
+        ImGui::EndChild();
+        if (ImGui::Button("Aplicar"))
         {
-            WindowProc(Testing.hwnd, WM_USER_MOVE, 1, Testing.position.x);
+           
+
+            SetWindowPos(WinSelected.hwnd, NULL, Testing.position.x, Testing.position.y, Testing.windowRect.right - Testing.windowRect.left, Testing.windowRect.bottom - Testing.windowRect.top, SWP_NOZORDER  | SWP_NOACTIVATE);
+
+            CloseWindow(Testing.hwnd);
+            //SetWindowLong(WinSelected.hwnd, GWL_STYLE, Testing.style);
+
+
         }
 
-        if (ImGui::SliderInt("Mover janela no eixo Y", (int*)&Testing.position.y, 0, MaxResolution.y))
-        {
-            WindowProc(Testing.hwnd, WM_USER_MOVE, 2, Testing.position.y);
-        }
 
-        if(ImGui::Button("Remover Bordas"))
-        {
-            SetWindowLong(Testing.hwnd, GWL_STYLE, WS_POPUP | WS_VISIBLE);
-        }
-
-        if (ImGui::Button("Por Bordas"))
-        {
-            SetWindowLong(Testing.hwnd, GWL_STYLE, WS_OVERLAPPEDWINDOW | WS_VISIBLE);
-        }
-        if (ImGui::Button("Chamar para cima"))
-        {
-            SetFocus(Testing.hwnd);
-            SetForegroundWindow(Testing.hwnd);
-
-
-        }
 
     }
 
